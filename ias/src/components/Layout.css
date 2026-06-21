@@ -1,0 +1,14 @@
+.layout {
+  position: relative;
+  min-height: 100vh;
+}
+
+.layout__main {
+  position: relative;
+  z-index: 1;
+}
+
+/* Keeps all page content readable over the glow */
+.layout__main > * {
+  position: relative;
+}

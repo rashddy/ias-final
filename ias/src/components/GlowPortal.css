@@ -1,0 +1,54 @@
+.glow-portal {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  background: #000000;
+}
+
+.glow-portal .portal-glow-canvas {
+  z-index: 1;
+}
+
+.glow-portal__source {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 52vh;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    #ffffff 15%,
+    #ffffff 85%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 20px 8px rgba(255, 255, 255, 0.95),
+    0 0 50px 20px rgba(255, 200, 120, 0.55),
+    0 0 100px 45px rgba(255, 107, 0, 0.3);
+  z-index: 2;
+  animation: portal-pulse 6s ease-in-out infinite;
+}
+
+@keyframes portal-pulse {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.93;
+    filter: brightness(1.08);
+  }
+}
+
+.glow-portal__vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 50%, rgba(0, 0, 0, 0.4) 85%, rgba(0, 0, 0, 0.8) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, transparent 20%, transparent 80%, rgba(0, 0, 0, 0.3) 100%);
+  z-index: 3;
+}
