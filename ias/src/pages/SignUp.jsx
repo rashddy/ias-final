@@ -16,13 +16,18 @@ export default function SignUp() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setSuccess('')
-    const result = signup(email, password, confirmPassword, displayName)
+    setLoading(true)
+
+    const result = await signup(email, password, confirmPassword, displayName)
+    setLoading(false)
+
     if (result.success) {
       setSuccess(result.message)
       setTimeout(() => navigate('/login'), 2000)
@@ -55,6 +60,7 @@ export default function SignUp() {
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your name"
                 autoComplete="name"
+                disabled={loading}
               />
             </div>
 
@@ -68,6 +74,7 @@ export default function SignUp() {
                 placeholder="you@company.com"
                 autoComplete="email"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -82,12 +89,14 @@ export default function SignUp() {
                   placeholder="Create a strong password"
                   autoComplete="new-password"
                   required
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   className="toggle-password"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label="Toggle password visibility"
+                  disabled={loading}
                 >
                   <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} />
                 </button>
@@ -105,6 +114,7 @@ export default function SignUp() {
                 placeholder="Re-enter password"
                 autoComplete="new-password"
                 required
+                disabled={loading}
               />
               {confirmPassword.length > 0 && (
                 <p className={`password-match ${password === confirmPassword ? 'password-match--ok' : 'password-match--fail'}`}>
@@ -117,8 +127,8 @@ export default function SignUp() {
             {error && <div className="form-error">{error}</div>}
             {success && <div className="form-success">{success}</div>}
 
-            <Button type="submit" variant="primary" size="lg" className="login-submit">
-              Sign up
+            <Button type="submit" variant="primary" size="lg" className="login-submit" disabled={loading}>
+              {loading ? 'Creating account…' : 'Sign up'}
             </Button>
           </form>
 

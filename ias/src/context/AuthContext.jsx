@@ -1,27 +1,18 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
+import { authApi, ApiError } from '../lib/api'
 
 const AuthContext = createContext(null)
 
-const DEMO_USER = {
-  email: 'admin@company.com',
-  password: 'SecurePass123!',
-  displayName: 'Admin User',
-}
-const DEMO_OTP = '483921'
+const SESSION_STORAGE_KEY = 'iso_session'
 const SESSION_TIMEOUT_MS = 5 * 60 * 1000
-const USERS_STORAGE_KEY = 'iso_registered_users'
 
-function loadRegisteredUsers() {
+function loadSession() {
   try {
-    const saved = localStorage.getItem(USERS_STORAGE_KEY)
-    return saved ? JSON.parse(saved) : {}
+    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY)
+    return saved ? JSON.parse(saved) : null
   } catch {
-    return {}
+    return null
   }
-}
-
-function saveRegisteredUsers(users) {
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users))
 }
 
 function validateEmail(email) {
@@ -37,35 +28,78 @@ function validatePassword(password) {
   return null
 }
 
-function findAccount(email, password) {
-  const normalized = email.trim().toLowerCase()
-  if (normalized === DEMO_USER.email && password === DEMO_USER.password) {
-    return { email: DEMO_USER.email, displayName: DEMO_USER.displayName }
-  }
-  const users = loadRegisteredUsers()
-  const account = users[normalized]
-  if (account && account.password === password) {
-    return { email: account.email, displayName: account.displayName }
-  }
-  return null
-}
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const saved = sessionStorage.getItem('iso_session')
-    return saved ? JSON.parse(saved) : null
+  const [user, setUser] = useState(() => loadSession()?.user ?? null)
+  const [tokens, setTokens] = useState(() => {
+    const session = loadSession()
+    return session
+      ? { idToken: session.idToken, refreshToken: session.refreshToken, expiresAt: session.expiresAt }
+      : null
   })
-  const [mfaPending, setMfaPending] = useState(false)
-  const [pendingUser, setPendingUser] = useState(null)
   const [lastActivity, setLastActivity] = useState(Date.now())
   const [sessionExpired, setSessionExpired] = useState(false)
-  const [loginAttempts, setLoginAttempts] = useState(0)
-  const [lockedUntil, setLockedUntil] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [mfaPending, setMfaPending] = useState(false)
+  const [mfaSessionId, setMfaSessionId] = useState(null)
+  const [mfaEmail, setMfaEmail] = useState('')
   const [, setTick] = useState(0)
+  const refreshTimerRef = useRef(null)
 
-  const isAuthenticated = !!user && !sessionExpired
+  const isAuthenticated = !!user && !!tokens?.idToken && !sessionExpired
 
-  const signup = useCallback((email, password, confirmPassword, displayName) => {
+  const persistSession = useCallback((sessionUser, sessionTokens) => {
+    const session = {
+      user: sessionUser,
+      idToken: sessionTokens.idToken,
+      refreshToken: sessionTokens.refreshToken,
+      expiresAt: sessionTokens.expiresAt,
+      sessionStart: new Date().toISOString(),
+      sessionId: crypto.randomUUID(),
+    }
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+    setUser(sessionUser)
+    setTokens({
+      idToken: sessionTokens.idToken,
+      refreshToken: sessionTokens.refreshToken,
+      expiresAt: sessionTokens.expiresAt,
+    })
+    setSessionExpired(false)
+    setLastActivity(Date.now())
+  }, [])
+
+  const clearSession = useCallback(() => {
+    setUser(null)
+    setTokens(null)
+    setSessionExpired(false)
+    setMfaPending(false)
+    setMfaSessionId(null)
+    setMfaEmail('')
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current)
+      refreshTimerRef.current = null
+    }
+  }, [])
+
+  const refreshTokens = useCallback(async () => {
+    if (!tokens?.refreshToken) return false
+
+    try {
+      const data = await authApi.refresh(tokens.refreshToken)
+      const expiresAt = Date.now() + data.expiresIn * 1000
+      persistSession(user, {
+        idToken: data.idToken,
+        refreshToken: data.refreshToken,
+        expiresAt,
+      })
+      return true
+    } catch {
+      clearSession()
+      return false
+    }
+  }, [tokens?.refreshToken, user, persistSession, clearSession])
+
+  const signup = useCallback(async (email, password, confirmPassword, displayName) => {
     const normalized = email.trim().toLowerCase()
 
     if (!validateEmail(normalized)) {
@@ -79,87 +113,162 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Passwords do not match.' }
     }
 
-    if (normalized === DEMO_USER.email) {
-      return { success: false, error: 'This email is reserved for the demo account.' }
-    }
-
-    const users = loadRegisteredUsers()
-    if (users[normalized]) {
-      return { success: false, error: 'An account with this email already exists. Please sign in.' }
-    }
-
-    const name = displayName.trim() || normalized.split('@')[0]
-    users[normalized] = {
-      email: normalized,
-      password,
-      displayName: name,
-      createdAt: new Date().toISOString(),
-    }
-    saveRegisteredUsers(users)
-
-    return { success: true, message: 'Account created! You can now sign in with MFA.' }
-  }, [])
-
-  const login = useCallback((email, password) => {
-    if (lockedUntil && Date.now() < lockedUntil) {
-      const remaining = Math.ceil((lockedUntil - Date.now()) / 1000)
-      return { success: false, error: `Account locked. Try again in ${remaining}s.` }
-    }
-
-    const account = findAccount(email, password)
-    if (account) {
-      setPendingUser({
-        email: account.email,
-        displayName: account.displayName,
-        loginTime: new Date().toISOString(),
+    try {
+      const data = await authApi.signup({
+        email: normalized,
+        password,
+        displayName: displayName.trim() || undefined,
       })
-      setMfaPending(true)
-      setLoginAttempts(0)
-      return { success: true, mfaRequired: true }
+      return { success: true, message: data.message }
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Unable to create account. Please try again.'
+      return { success: false, error: message }
     }
-
-    const attempts = loginAttempts + 1
-    setLoginAttempts(attempts)
-    if (attempts >= 5) {
-      setLockedUntil(Date.now() + 30000)
-      setLoginAttempts(0)
-      return { success: false, error: 'Too many failed attempts. Account locked for 30 seconds.' }
-    }
-
-    return { success: false, error: `Invalid credentials. ${5 - attempts} attempts remaining.` }
-  }, [loginAttempts, lockedUntil])
-
-  const verifyMfa = useCallback((otp) => {
-    if (otp === DEMO_OTP) {
-      const session = {
-        ...pendingUser,
-        mfaVerified: true,
-        sessionStart: new Date().toISOString(),
-        sessionId: crypto.randomUUID(),
-      }
-      setUser(session)
-      setMfaPending(false)
-      setPendingUser(null)
-      setSessionExpired(false)
-      setLastActivity(Date.now())
-      sessionStorage.setItem('iso_session', JSON.stringify(session))
-      return { success: true }
-    }
-    return { success: false, error: 'Invalid OTP code. Please try again.' }
-  }, [pendingUser])
-
-  const logout = useCallback(() => {
-    setUser(null)
-    setMfaPending(false)
-    setPendingUser(null)
-    setSessionExpired(false)
-    sessionStorage.removeItem('iso_session')
   }, [])
+
+  const login = useCallback(async (email, password) => {
+    const normalized = email.trim().toLowerCase()
+
+    if (!validateEmail(normalized)) {
+      return { success: false, error: 'Please enter a valid email address.' }
+    }
+
+    try {
+      const data = await authApi.login({ email: normalized, password })
+
+      if (data.mfaRequired) {
+        setMfaPending(true)
+        setMfaSessionId(data.mfaSessionId)
+        setMfaEmail(data.email)
+        return { success: true, mfaRequired: true, message: data.message }
+      }
+
+      const expiresAt = Date.now() + data.expiresIn * 1000
+      persistSession(data.user, {
+        idToken: data.idToken,
+        refreshToken: data.refreshToken,
+        expiresAt,
+      })
+      return { success: true }
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Unable to sign in. Please try again.'
+      return { success: false, error: message }
+    }
+  }, [persistSession])
+
+  const verifyMfa = useCallback(async (otp) => {
+    if (!mfaSessionId) {
+      return { success: false, error: 'Verification session expired. Please sign in again.' }
+    }
+
+    try {
+      const data = await authApi.verifyOtp({ mfaSessionId, otp })
+      const expiresAt = Date.now() + data.expiresIn * 1000
+      persistSession(data.user, {
+        idToken: data.idToken,
+        refreshToken: data.refreshToken,
+        expiresAt,
+      })
+      setMfaPending(false)
+      setMfaSessionId(null)
+      setMfaEmail('')
+      return { success: true }
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Invalid verification code.'
+      return { success: false, error: message }
+    }
+  }, [mfaSessionId, persistSession])
+
+  const resendOtp = useCallback(async () => {
+    if (!mfaSessionId) {
+      return { success: false, error: 'Verification session expired. Please sign in again.' }
+    }
+
+    try {
+      const data = await authApi.resendOtp({ mfaSessionId })
+      setMfaEmail(data.email)
+      return { success: true, message: data.message }
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Unable to resend code.'
+      return { success: false, error: message }
+    }
+  }, [mfaSessionId])
+
+  const cancelMfa = useCallback(() => {
+    setMfaPending(false)
+    setMfaSessionId(null)
+    setMfaEmail('')
+  }, [])
+
+  const logout = useCallback(async () => {
+    if (tokens?.idToken) {
+      try {
+        await authApi.logout(tokens.idToken)
+      } catch {
+        // Clear local session even if server revoke fails
+      }
+    }
+    clearSession()
+  }, [tokens?.idToken, clearSession])
 
   const touchActivity = useCallback(() => {
     setLastActivity(Date.now())
     setSessionExpired(false)
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function bootstrap() {
+      const session = loadSession()
+      if (!session?.idToken) {
+        setAuthLoading(false)
+        return
+      }
+
+      try {
+        const profile = await authApi.me(session.idToken)
+        if (cancelled) return
+        setUser(profile)
+        setTokens({
+          idToken: session.idToken,
+          refreshToken: session.refreshToken,
+          expiresAt: session.expiresAt,
+        })
+      } catch {
+        if (cancelled) return
+        if (session.refreshToken) {
+          const refreshed = await refreshTokens()
+          if (!refreshed) clearSession()
+        } else {
+          clearSession()
+        }
+      } finally {
+        if (!cancelled) setAuthLoading(false)
+      }
+    }
+
+    bootstrap()
+    return () => { cancelled = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!tokens?.expiresAt || !tokens?.refreshToken) return
+
+    const msUntilRefresh = tokens.expiresAt - Date.now() - 60_000
+    if (msUntilRefresh <= 0) {
+      refreshTokens()
+      return
+    }
+
+    refreshTimerRef.current = setTimeout(() => {
+      refreshTokens()
+    }, msUntilRefresh)
+
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+    }
+  }, [tokens?.expiresAt, tokens?.refreshToken, refreshTokens])
 
   useEffect(() => {
     if (!user) return
@@ -192,17 +301,20 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user,
       isAuthenticated,
+      authLoading,
       mfaPending,
+      mfaEmail,
       signup,
       login,
       verifyMfa,
+      resendOtp,
+      cancelMfa,
       logout,
       sessionExpired,
       sessionRemaining,
       lastActivity,
       touchActivity,
       SESSION_TIMEOUT_MS,
-      DEMO_OTP,
     }}>
       {children}
     </AuthContext.Provider>
