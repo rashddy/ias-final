@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import Button from '../components/Button'
 import IsoInfoBox from '../components/IsoInfoBox'
@@ -100,6 +100,10 @@ export default function Login() {
                 <p>Email: <code>admin@company.com</code></p>
                 <p>Password: <code>SecurePass123!</code></p>
               </div>
+
+              <p className="login-switch">
+                Don&apos;t have an account? <Link to="/signup">Sign up</Link>
+              </p>
             </>
           ) : (
             <>

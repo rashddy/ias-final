@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
+import SignUp from './pages/SignUp'
 import Dashboard from './pages/Dashboard'
 import SecurityPolicy from './pages/SecurityPolicy'
 import Checklist from './pages/Checklist'
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/security-policy" element={<SecurityPolicy />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
           <Route path="/dashboard" element={
             <ProtectedRoute><Dashboard /></ProtectedRoute>
           } />

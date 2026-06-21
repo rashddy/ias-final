@@ -58,9 +58,14 @@ export default function Navbar({ variant = 'landing' }) {
             <Button variant="primary" size="sm" onClick={logout}>Logout</Button>
           </>
         ) : (
-          <Link to="/login">
-            <Button variant="primary" size="sm">Login</Button>
-          </Link>
+          <>
+            <Link to="/login">
+              <Button variant="outline" size="sm">Login</Button>
+            </Link>
+            <Link to="/signup">
+              <Button variant="primary" size="sm">Sign up</Button>
+            </Link>
+          </>
         )}
       </div>
     </header>
