@@ -10,6 +10,7 @@ import Checklist from './pages/Checklist'
 import PasswordChecker from './pages/PasswordChecker'
 import Quiz from './pages/Quiz'
 import SessionSimulation from './pages/SessionSimulation'
+import LoginSimulator from './pages/LoginSimulator'
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
             <ProtectedRoute><Quiz /></ProtectedRoute>
           } />
           <Route path="/session" element={<SessionSimulation />} />
+          <Route path="/login-simulator" element={<LoginSimulator />} />
           {/* Legacy paths */}
           <Route path="/dashboard/checklist" element={<Checklist />} />
           <Route path="/dashboard/password" element={<PasswordChecker />} />

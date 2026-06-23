@@ -12,6 +12,7 @@ const FEATURE_CARDS = [
   { path: '/password-checker', icon: 'fa-key', label: 'Password Policy Checker', iso: 'A.9.4' },
   { path: '/quiz', icon: 'fa-brain', label: 'Security Awareness Quiz', iso: 'A.6.3' },
   { path: '/session', icon: 'fa-clock', label: 'Session Simulation', iso: 'A.9.4' },
+  { path: '/login-simulator', icon: 'fa-user-shield', label: 'Login Security Simulator', iso: 'A.8.5' },
   { path: '/checklist', icon: 'fa-list-check', label: 'Compliance Checklist', iso: 'Annex A' },
 ]
 

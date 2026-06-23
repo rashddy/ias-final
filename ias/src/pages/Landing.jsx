@@ -18,9 +18,15 @@ const FEATURE_CARDS = [
   },
   {
     icon: 'fa-right-to-bracket',
-    title: 'Login & MFA Demo',
-    desc: 'Experience secure authentication with multi-factor verification.',
+    title: 'Real Login & MFA',
+    desc: 'Sign in to the actual compliance portal with your account.',
     path: '/login',
+  },
+  {
+    icon: 'fa-user-shield',
+    title: 'Login Security Simulator',
+    desc: 'Training only — pre-filled demo account, step-by-step security lessons.',
+    path: '/login-simulator',
   },
   {
     icon: 'fa-key',

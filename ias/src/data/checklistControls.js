@@ -39,16 +39,8 @@ export function saveProgress(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
 }
 
-export function getUnlockedIndex(completed) {
-  return completed.length
-}
-
-export function getControlStatus(control, index, completed, activeId) {
+export function getControlStatus(control, completed, selectedId) {
   if (completed.includes(control.id)) return 'done'
-  const unlockedIndex = completed.length
-  if (index === unlockedIndex) {
-    if (activeId === control.id) return 'active'
-    return 'unlocked'
-  }
-  return 'locked'
+  if (selectedId === control.id) return 'active'
+  return 'available'
 }

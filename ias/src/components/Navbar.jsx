@@ -10,12 +10,14 @@ const APP_LINKS = [
   { label: 'Password', path: '/password-checker' },
   { label: 'Quiz', path: '/quiz' },
   { label: 'Session', path: '/session' },
+  { label: 'Login Sim', path: '/login-simulator' },
 ]
 
 const LANDING_LINKS = [
   { label: 'Overview', path: '/#overview' },
   { label: 'Policy', path: '/security-policy' },
   { label: 'Checklist', path: '/checklist' },
+  { label: 'Login Sim', path: '/login-simulator' },
   { label: 'Features', path: '/#features' },
 ]
 

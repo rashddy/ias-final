@@ -1,0 +1,83 @@
+.security-learning-panel {
+  padding: 28px;
+  border-radius: var(--radius-lg);
+  background: rgba(10, 10, 10, 0.88);
+  border: 1px solid var(--bg-card-border);
+  height: fit-content;
+}
+
+.security-learning-panel--info {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.security-learning-panel--warning {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.security-learning-panel--danger {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.security-learning-panel--success {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.04);
+}
+
+.security-learning-panel__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.security-learning-panel__header i {
+  font-size: 1.25rem;
+  color: #60a5fa;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.security-learning-panel--warning .security-learning-panel__header i { color: var(--warning); }
+.security-learning-panel--danger .security-learning-panel__header i { color: var(--danger); }
+.security-learning-panel--success .security-learning-panel__header i { color: var(--success); }
+.security-learning-panel--default .security-learning-panel__header i { color: var(--accent-orange); }
+
+.security-learning-panel__header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.security-learning-panel__list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.security-learning-panel__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  animation: securityPanelFade 0.35s ease;
+}
+
+.security-learning-panel__item i {
+  color: var(--success);
+  font-size: 0.625rem;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.security-learning-panel--danger .security-learning-panel__item i { color: #fca5a5; }
+
+@keyframes securityPanelFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
